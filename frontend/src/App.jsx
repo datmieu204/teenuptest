@@ -48,14 +48,27 @@ export default function App() {
 
   const classByDay = useMemo(() => {
     const map = new Map(DAYS.map((_, idx) => [idx, []]));
-    for (const item of classes) {
-      map.get(item.day_of_week)?.push(item);
+    const classList = Array.isArray(classes) ? classes : [];
+    for (const item of classList) {
+      const dayIndex = Number(item.day_of_week);
+      if (Number.isInteger(dayIndex) && dayIndex >= 0 && dayIndex <= 6) {
+        map.get(dayIndex)?.push(item);
+      }
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.time_slot.localeCompare(b.time_slot));
+      list.sort((a, b) => (a.time_slot || "").localeCompare(b.time_slot || ""));
     }
     return map;
   }, [classes]);
+
+  function normalizeClassItem(item) {
+    return {
+      ...item,
+      day_of_week: item.day_of_week ?? item.dayOfWeek,
+      time_slot: item.time_slot ?? item.timeSlot,
+      teacher_name: item.teacher_name ?? item.teacherName
+    };
+  }
 
   async function loadData() {
     setLoading(true);
@@ -65,9 +78,9 @@ export default function App() {
         api("/students"),
         api("/classes")
       ]);
-      setParents(parentsData);
-      setStudents(studentsData);
-      setClasses(classesData);
+      setParents(Array.isArray(parentsData) ? parentsData : []);
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setClasses(Array.isArray(classesData) ? classesData.map(normalizeClassItem) : []);
     } catch (error) {
       setMessage(error.message);
     } finally {
